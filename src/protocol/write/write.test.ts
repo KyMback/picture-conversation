@@ -1,4 +1,4 @@
-import { writeDataAsLastBitsToBuffer } from ".";
+import { writeDataAsLastBitsToBuffer } from "./index";
 
 describe("writeDataAsLastBitsToBuffer", () => {
   describe("Buffer 8 * 3 zeros", () => {

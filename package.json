@@ -1,7 +1,8 @@
 {
   "name": "picture-conversation",
   "version": "0.0.1",
-  "main": "index.js",
+  "repository": "git@github.com:KyMback/picture-conversation.git",
+  "author": "KyMback <Seregick@hotmail.com>",
   "license": "MIT",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve -c ./configs/webpack.config.dev.js --open",
@@ -10,6 +11,8 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "js-file-download": "^0.4.12",
+    "mobx": "^6.3.5",
+    "mobx-react-lite": "^3.2.1",
     "pngjs": "^6.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"

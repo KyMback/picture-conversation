@@ -1,4 +1,4 @@
-import { readDataAsLastBitsOfBytes } from ".";
+import { readDataAsLastBitsOfBytes } from "./index";
 
 describe("readDataAsLastBitsOfBytes", () => {
   it("Throw Error if incorrect buffer length", () => {
