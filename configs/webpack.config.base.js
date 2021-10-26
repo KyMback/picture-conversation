@@ -18,6 +18,9 @@ module.exports = {
     fallback: {
       buffer: "buffer",
     },
+    alias: {
+      mobx: "mobx/dist/mobx.esm.production.min.js",
+    },
   },
   module: {
     rules: [
