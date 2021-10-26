@@ -35,7 +35,7 @@ module.exports = {
       template: join(publicPath, "index.html"),
     }),
     new ProvidePlugin({
-      "Buffer": ["buffer", "Buffer"]
-    })
+      Buffer: ["buffer", "Buffer"],
+    }),
   ],
 };
