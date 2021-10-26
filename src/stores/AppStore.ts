@@ -16,41 +16,65 @@ export class AppStore {
 
   public text = "";
   public file?: File = undefined;
+  public png?: PNG = undefined;
   public filePath?: string = undefined;
 
   public get currentBytesCount() {
     return this.encoder.encode(this.text).length;
   }
 
+  public get maxDataBytesCount() {
+    if (!this.png) {
+      return 0;
+    }
+
+    return getMaxDataBytesCount(this.png.data);
+  }
+
   constructor() {
-    makeObservable<AppStore, "setFilePath">(this, {
+    makeObservable<AppStore, "setFilePath" | "setPng" | "decode">(this, {
       text: observable,
       file: observable,
       filePath: observable,
+      png: observable,
+      maxDataBytesCount: computed,
       currentBytesCount: computed,
       setFile: action,
       setText: action,
       setFilePath: action,
+      setPng: action,
+      decode: action,
     });
 
-    this.disposers.push(reaction(() => this.file, this.setFilePath));
+    this.disposers.push(reaction(() => this.png, this.decode));
   }
 
   public setText = (value: string) => {
     this.text = value;
   };
 
-  public setFile = (value: FileList | null) => {
+  public setFile = async (value: FileList | null) => {
     const file = value?.[0];
+
+    this.file = file;
+    this.setFilePath(file);
+    await this.setPng(file);
+  };
+
+  private setPng = async (file?: File) => {
     if (!file) {
+      this.png = undefined;
       return;
     }
 
-    this.file = file;
+    const buf = await file.arrayBuffer();
+    runInAction(() => {
+      this.png = PNG.sync.read(new Buffer(buf));
+    });
   };
 
-  private setFilePath = () => {
-    if (!this.file) {
+  private setFilePath = (file?: File) => {
+    if (!file) {
       this.filePath = undefined;
       return;
     }
@@ -58,43 +82,45 @@ export class AppStore {
     const fr = new FileReader();
     fr.onload = (ev) => {
       runInAction(() => {
-        this.filePath = ev.target.result;
+        this.filePath = ev.target?.result as string;
       });
     };
-    fr.readAsDataURL(this.file);
+    fr.readAsDataURL(file);
   };
 
-  public decode = async () => {
-    if (!this.file) {
+  private decode = async (png?: PNG) => {
+    if (!png) {
       return;
     }
 
-    const buf = await this.file.arrayBuffer();
-    const png = PNG.sync.read(new Buffer(buf));
+    const result = readData(png.data);
 
-    const data = readData(png.data);
-    console.log(`decode data: ${data.data}`);
+    if ("isNotPCP" in result) {
+      return;
+    }
+
+    runInAction(() => {
+      this.text = result.data;
+    });
   };
 
   public encode = async () => {
-    if (!this.file) {
+    if (!this.file || !this.png) {
       return;
     }
 
     const encoder = new TextEncoder();
     const encodedText = encoder.encode(this.text);
-    const buf = await this.file.arrayBuffer();
-    const png = PNG.sync.read(new Buffer(buf));
-    const maxDataBytesCount = getMaxDataBytesCount(png.data);
+    const maxDataBytesCount = getMaxDataBytesCount(this.png.data);
 
     if (encodedText.length > maxDataBytesCount) {
       alert(`Too much symbols`);
       return;
     }
 
-    writeData(png.data, encodedText);
+    writeData(this.png.data, encodedText);
 
-    fileDownload(PNG.sync.write(png), this.file.name);
+    fileDownload(PNG.sync.write(this.png), this.file.name);
   };
 
   public dispose = () => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { AppStore } from "./stores/AppStore";
+import { AppStore } from "stores/AppStore";
 
 export const App = observer(() => {
   const [store] = useState(new AppStore());
@@ -19,11 +19,10 @@ export const App = observer(() => {
           value={store.text}
         />
         <div>
-          {store.currentBytesCount} / {"N/A"}
+          {store.currentBytesCount} / {store.maxDataBytesCount}
         </div>
         <div>
           <button onClick={store.encode}>Encode</button>
-          <button onClick={store.decode}>Decode</button>
         </div>
       </div>
     </div>

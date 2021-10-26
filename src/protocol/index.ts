@@ -23,9 +23,15 @@ export const writeData = (buffer: Uint8Array, data: Uint8Array) => {
   );
 };
 
-export const readData = (buffer: Uint8Array) => {
+export const readData = (
+  buffer: Uint8Array,
+):
+  | {
+      data: string;
+    }
+  | { isNotPCP: true } => {
   if (isPCPBuffer(buffer)) {
-    throw new Error("Invalid protocol structure");
+    return { isNotPCP: true };
   }
 
   const textDecoder = new TextDecoder();
