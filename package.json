@@ -8,6 +8,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve -c ./configs/webpack.config.dev.js --open",
     "build": "cross-env NODE_ENV=production webpack -c ./configs/webpack.config.prod.js",
+    "deploy": "gh-pages -d dist",
     "bundle-analyze": "cross-env ANALYZE=true yarn build",
     "test": "jest",
     "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
@@ -46,6 +47,7 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.26.1",
+    "gh-pages": "^3.2.3",
     "html-webpack-plugin": "^5.4.0",
     "husky": "^7.0.4",
     "jest": "^27.3.1",

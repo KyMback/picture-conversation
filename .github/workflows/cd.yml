@@ -1,12 +1,14 @@
-name: CI
+name: CD
 
 on:
-  pull_request:
+  push:
     branches:
       - master
+  workflow_dispatch:
+
 jobs:
-  test:
-    name: Build project and run tests
+  deploy:
+    name: Deploy into GitHub pages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -15,5 +17,4 @@ jobs:
           node-version: '14'
           cache: 'yarn'
       - run: yarn
-      - run: yarn build
-      - run: yarn test
+      - run: yarn deploy
