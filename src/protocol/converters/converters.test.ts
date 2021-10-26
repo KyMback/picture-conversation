@@ -39,6 +39,6 @@ describe("uint8ArrayToInt32", () => {
   it("5,0,23,3 should be 83891971", function () {
     const result = uint8ArrayToInt32(new Uint8Array([5, 0, 23, 3]));
 
-    expect(result).toBe(83891971);
+    expect(result).toBe(8389171);
   });
 });
