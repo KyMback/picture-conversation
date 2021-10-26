@@ -18,6 +18,9 @@ module.exports = {
     fallback: {
       buffer: "buffer",
     },
+    alias: {
+      mobx: "mobx/dist/mobx.esm.production.min.js",
+    },
   },
   module: {
     rules: [
@@ -35,7 +38,7 @@ module.exports = {
       template: join(publicPath, "index.html"),
     }),
     new ProvidePlugin({
-      "Buffer": ["buffer", "Buffer"]
-    })
+      Buffer: ["buffer", "Buffer"],
+    }),
   ],
 };

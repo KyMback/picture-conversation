@@ -11,18 +11,12 @@
     "baseUrl": "./src",
     "downlevelIteration": true,
     "paths": {
-      "typings/*": ["typings/*"],
-      "utils/*": ["utils/*"],
-      "services/*": ["services/*"],
-      "stores/*": ["stores/*"],
-      "contexts/*": ["contexts/*"],
-      "hooks/*": ["hooks/*"],
-      "components/*": ["components/*"],
-      "pages/*": ["pages/*"],
-      "modules/*": ["modules/*"],
-      "styles/*": ["styles/*"],
-      "constants/*": ["constants/*"]
+      "stores/*": [
+        "stores/*"
+      ]
     }
   },
-  "include": ["./src"],
+  "include": [
+    "./src"
+  ]
 }

@@ -1,0 +1,27 @@
+{
+  "extends": [
+    "plugin:react/recommended",
+    "plugin:react/jsx-runtime",
+    "google",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "react",
+    "@typescript-eslint",
+    "prettier"
+  ],
+  "rules": {
+    "prettier/prettier": "error",
+    "require-jsdoc": "off",
+    "object-curly-spacing": [
+      "error",
+      "always"
+    ]
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}

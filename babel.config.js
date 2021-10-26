@@ -8,7 +8,17 @@ const presets = [
   ],
   "@babel/preset-typescript",
 ];
-const plugins = [];
+const plugins = [
+  [
+    "module-resolver",
+    {
+      root: ["./src"],
+      alias: {
+        stores: "./src/stores",
+      },
+    },
+  ],
+];
 
 module.exports = {
   presets,

@@ -2,9 +2,9 @@ const bitsInByte = 8;
 
 /**
  * Writes data into the buffer as last bit in each byte
- * @param buffer
- * @param afterNDataBytes - number of skipped data bytes in buffer
- * @param data
+ * @param {Uint8Array} buffer - target buffer
+ * @param {number} afterNDataBytes - number of skipped data bytes in buffer
+ * @param {Uint8Array} data - data to write
  */
 export const writeDataAsLastBitsToBuffer = (
   buffer: Uint8Array,
