@@ -7,8 +7,10 @@ const identifier = "PC-PI";
 const encodedIdentifier = new TextEncoder().encode(identifier);
 const capacityInBytesLength = 4;
 
-export const writeData = (buffer: Uint8Array, data: Uint8Array) => {
+export const writeData = (buffer: Uint8ClampedArray, data: Uint8Array) => {
   const dataLengthInBytes = int32ToUint8Array(data.length);
+
+  // encodedIdentifier.
 
   writeDataAsLastBitsToBuffer(buffer, 0, encodedIdentifier);
   writeDataAsLastBitsToBuffer(
@@ -24,7 +26,7 @@ export const writeData = (buffer: Uint8Array, data: Uint8Array) => {
 };
 
 export const readData = (
-  buffer: Uint8Array,
+  buffer: Uint8ClampedArray,
 ):
   | {
       data: string;
@@ -51,15 +53,13 @@ export const readData = (
   return { data: textDecoder.decode(data) };
 };
 
-export const getMaxDataBytesCount = (buffer: Uint8Array) => {
+export const getMaxDataBytesCount = (buffer: Uint8ClampedArray) => {
   return (
-    ((buffer.byteLength / 8) | 0) -
-    capacityInBytesLength -
-    encodedIdentifier.length
+    ((buffer.length / 8) | 0) - capacityInBytesLength - encodedIdentifier.length
   );
 };
 
-export const isPCPBuffer = (buffer: Uint8Array) => {
+export const isPCPBuffer = (buffer: Uint8ClampedArray) => {
   const id = readDataAsLastBitsOfBytes(buffer, 0, encodedIdentifier.length);
   return new TextDecoder().decode(id) !== identifier;
 };

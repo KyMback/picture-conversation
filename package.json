@@ -20,7 +20,6 @@
     "*.{js,jsx,ts,tsx}": "eslint --cache --fix"
   },
   "dependencies": {
-    "buffer": "^6.0.3",
     "js-file-download": "^0.4.12",
     "mobx": "^6.3.5",
     "mobx-react-lite": "^3.2.1",

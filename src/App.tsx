@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { AppStore } from "stores/AppStore";
 
 export const App = observer(() => {
-  const [store] = useState(new AppStore());
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [store] = useState(new AppStore(ref));
 
   useEffect(() => store.dispose, [store]);
 
   return (
     <div>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <img width={300} src={store.filePath} alt={"Image"} />
+        <canvas ref={ref} style={{ width: "300px" }} />
         <input type="file" onChange={(e) => store.setFile(e.target.files)} />
       </div>
       <div>

@@ -1,7 +1,7 @@
 const bitsInByte = 8;
 
 export const readDataAsLastBitsOfBytes = (
-  bytes: Uint8Array,
+  bytes: Uint8ClampedArray,
   afterNDataBytes: number,
   length: number,
 ) => {
@@ -18,7 +18,7 @@ export const readDataAsLastBitsOfBytes = (
   return new Uint8Array(r);
 };
 
-const readByte = (buffer: Uint8Array, from: number) => {
+const readByte = (buffer: Uint8ClampedArray, from: number) => {
   let value = 0;
   for (let i = 0; i < bitsInByte; i++) {
     value |=
