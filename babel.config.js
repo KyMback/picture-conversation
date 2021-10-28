@@ -15,6 +15,7 @@ const plugins = [
       root: ["./src"],
       alias: {
         stores: "./src/stores",
+        utils: "./src/utils",
       },
     },
   ],

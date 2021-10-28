@@ -1,65 +1,65 @@
 import { int32ToUint8Array, uint8ArrayToInt32 } from "./converters";
 import { writeDataAsLastBitsToBuffer } from "./write";
-import { readDataAsLastBitsOfBytes } from "./read";
+import { getByteWithDataBit, getDataChunk } from "./accessors";
+import { getIteratorLength } from "utils/iterators";
 
 // Picture-conversation protocol identifier
 const identifier = "PC-PI";
 const encodedIdentifier = new TextEncoder().encode(identifier);
 const capacityInBytesLength = 4;
 
-export const writeData = (buffer: Uint8Array, data: Uint8Array) => {
+export const writeData = (buffer: Uint8ClampedArray, data: Uint8Array) => {
   const dataLengthInBytes = int32ToUint8Array(data.length);
 
-  writeDataAsLastBitsToBuffer(buffer, 0, encodedIdentifier);
-  writeDataAsLastBitsToBuffer(
-    buffer,
-    encodedIdentifier.length,
-    dataLengthInBytes,
+  const allData = new Uint8Array(
+    encodedIdentifier.byteLength +
+      dataLengthInBytes.byteLength +
+      data.byteLength,
   );
-  writeDataAsLastBitsToBuffer(
-    buffer,
-    encodedIdentifier.length + dataLengthInBytes.length,
+
+  allData.set(encodedIdentifier);
+  allData.set(dataLengthInBytes, encodedIdentifier.byteLength);
+  allData.set(
     data,
+    encodedIdentifier.byteLength + dataLengthInBytes.byteLength,
   );
+
+  writeDataAsLastBitsToBuffer(buffer, allData);
 };
 
 export const readData = (
-  buffer: Uint8Array,
+  buffer: Uint8ClampedArray,
 ):
   | {
       data: string;
     }
   | { isNotPCP: true } => {
-  if (isPCPBuffer(buffer)) {
+  const chunk = getDataChunk(buffer);
+  const textDecoder = new TextDecoder();
+
+  chunk.next();
+  const nextIdBytes = chunk.next(encodedIdentifier.length);
+  if (
+    nextIdBytes.done ||
+    new TextDecoder().decode(nextIdBytes.value) !== identifier
+  ) {
     return { isNotPCP: true };
   }
 
-  const textDecoder = new TextDecoder();
+  const lengthBytes = chunk.next(capacityInBytesLength);
+  if (lengthBytes.done) {
+    return { isNotPCP: true };
+  }
 
-  const encodedLength = readDataAsLastBitsOfBytes(
-    buffer,
-    encodedIdentifier.length,
-    capacityInBytesLength,
-  );
-  const length = uint8ArrayToInt32(encodedLength);
-  const data = readDataAsLastBitsOfBytes(
-    buffer,
-    encodedIdentifier.length + encodedLength.length,
-    length,
-  );
+  const data = chunk.next(uint8ArrayToInt32(lengthBytes.value));
+  if (data.done) {
+    return { isNotPCP: true };
+  }
 
-  return { data: textDecoder.decode(data) };
+  return { data: textDecoder.decode(data.value) };
 };
 
-export const getMaxDataBytesCount = (buffer: Uint8Array) => {
-  return (
-    ((buffer.byteLength / 8) | 0) -
-    capacityInBytesLength -
-    encodedIdentifier.length
-  );
-};
-
-export const isPCPBuffer = (buffer: Uint8Array) => {
-  const id = readDataAsLastBitsOfBytes(buffer, 0, encodedIdentifier.length);
-  return new TextDecoder().decode(id) !== identifier;
+export const getMaxDataBytesCount = (buffer: Uint8ClampedArray) => {
+  const maxBits = getIteratorLength(getByteWithDataBit(buffer));
+  return ((maxBits / 8) | 0) - capacityInBytesLength - encodedIdentifier.length;
 };

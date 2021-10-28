@@ -1,6 +1,5 @@
 const { join } = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const { ProvidePlugin } = require("webpack");
 
 const rootPath = join(__dirname, "..");
 const srcPath = join(rootPath, "src");
@@ -36,9 +35,6 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: join(publicPath, "index.html"),
-    }),
-    new ProvidePlugin({
-      Buffer: ["buffer", "Buffer"],
     }),
   ],
 };

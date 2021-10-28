@@ -6,47 +6,65 @@ import {
   reaction,
   runInAction,
 } from "mobx";
-import { PNG } from "pngjs/browser";
 import { getMaxDataBytesCount, readData, writeData } from "../protocol";
 import fileDownload from "js-file-download";
+import { RefObject } from "react";
 
 export class AppStore {
   private encoder = new TextEncoder();
   private disposers: Array<() => void> = [];
+  private readonly canvasRef: RefObject<HTMLCanvasElement>;
 
   public text = "";
   public file?: File = undefined;
-  public png?: PNG = undefined;
-  public filePath?: string = undefined;
+  public imageData?: ImageData = undefined;
 
   public get currentBytesCount() {
     return this.encoder.encode(this.text).length;
   }
 
   public get maxDataBytesCount() {
-    if (!this.png) {
+    if (!this.imageData) {
       return 0;
     }
 
-    return getMaxDataBytesCount(this.png.data);
+    return getMaxDataBytesCount(this.imageData.data);
   }
 
-  constructor() {
-    makeObservable<AppStore, "setFilePath" | "setPng" | "decode">(this, {
+  private get canvas() {
+    if (!this.canvasRef.current) {
+      throw new Error("Canvas should exist");
+    }
+
+    return this.canvasRef.current;
+  }
+
+  private get canvasContext() {
+    const context = this.canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Canvas context should exist");
+    }
+
+    context.globalCompositeOperation = "copy";
+
+    return context;
+  }
+
+  constructor(canvasRef: RefObject<HTMLCanvasElement>) {
+    this.canvasRef = canvasRef;
+    makeObservable<AppStore, "decode">(this, {
       text: observable,
       file: observable,
-      filePath: observable,
-      png: observable,
+      imageData: observable,
       maxDataBytesCount: computed,
       currentBytesCount: computed,
       setFile: action,
       setText: action,
-      setFilePath: action,
-      setPng: action,
       decode: action,
     });
 
-    this.disposers.push(reaction(() => this.png, this.decode));
+    this.disposers.push(reaction(() => this.imageData, this.decode));
   }
 
   public setText = (value: string) => {
@@ -57,43 +75,32 @@ export class AppStore {
     const file = value?.[0];
 
     this.file = file;
-    this.setFilePath(file);
-    await this.setPng(file);
+
+    if (file) {
+      const filePath = await getFilePath(file);
+      const { naturalWidth, naturalHeight } =
+        await getHeightAndWidthFromDataUrl(filePath);
+
+      this.canvas.width = naturalWidth;
+      this.canvas.height = naturalHeight;
+      // TODO: think about compatibility see https://caniuse.com/?search=createImageBitmap
+      const imageBitmap = await createImageBitmap(file);
+      this.canvasContext.drawImage(imageBitmap, 0, 0);
+      this.imageData = this.canvasContext.getImageData(
+        0,
+        0,
+        naturalWidth,
+        naturalHeight,
+      );
+    }
   };
 
-  private setPng = async (file?: File) => {
-    if (!file) {
-      this.png = undefined;
+  private decode = async (image?: ImageData) => {
+    if (!image) {
       return;
     }
 
-    const buf = await file.arrayBuffer();
-    runInAction(() => {
-      this.png = PNG.sync.read(new Buffer(buf));
-    });
-  };
-
-  private setFilePath = (file?: File) => {
-    if (!file) {
-      this.filePath = undefined;
-      return;
-    }
-
-    const fr = new FileReader();
-    fr.onload = (ev) => {
-      runInAction(() => {
-        this.filePath = ev.target?.result as string;
-      });
-    };
-    fr.readAsDataURL(file);
-  };
-
-  private decode = async (png?: PNG) => {
-    if (!png) {
-      return;
-    }
-
-    const result = readData(png.data);
+    const result = readData(image.data);
 
     if ("isNotPCP" in result) {
       return;
@@ -104,23 +111,32 @@ export class AppStore {
     });
   };
 
-  public encode = async () => {
-    if (!this.file || !this.png) {
+  public encode = () => {
+    if (!this.file || !this.imageData) {
       return;
     }
 
     const encoder = new TextEncoder();
     const encodedText = encoder.encode(this.text);
-    const maxDataBytesCount = getMaxDataBytesCount(this.png.data);
+    const maxDataBytesCount = getMaxDataBytesCount(this.imageData.data);
 
     if (encodedText.length > maxDataBytesCount) {
       alert(`Too much symbols`);
       return;
     }
 
-    writeData(this.png.data, encodedText);
+    writeData(this.imageData.data, encodedText);
 
-    fileDownload(PNG.sync.write(this.png), this.file.name);
+    this.canvasContext.putImageData(this.imageData, 0, 0);
+
+    const fileName = this.file.name;
+    const newFileName = fileName.substr(0, fileName.lastIndexOf(".")) + ".png";
+
+    this.canvas.toBlob((blob) => {
+      if (blob) {
+        fileDownload(blob, newFileName, "image/png");
+      }
+    }, "image/png");
   };
 
   public dispose = () => {
@@ -129,3 +145,37 @@ export class AppStore {
     }
   };
 }
+
+const getFilePath = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+
+    fr.onload = (e) => {
+      resolve(e.target?.result as string);
+    };
+
+    fr.onerror = (e) => {
+      reject(e.target?.error);
+    };
+
+    fr.readAsDataURL(file);
+  });
+};
+
+const getHeightAndWidthFromDataUrl = (
+  dataURL: string,
+): Promise<{ naturalHeight: number; naturalWidth: number }> => {
+  const img = new Image();
+  return new Promise<{ naturalHeight: number; naturalWidth: number }>(
+    (resolve) => {
+      img.onload = () => {
+        resolve({
+          naturalHeight: img.naturalHeight,
+          naturalWidth: img.naturalWidth,
+        });
+      };
+
+      img.src = dataURL;
+    },
+  ).finally(() => img.remove());
+};
