@@ -1,7 +1,13 @@
 import { int32ToUint8Array, uint8ArrayToInt32 } from "./converters";
 import { writeDataAsLastBitsToBuffer } from "./write";
-import { getByteWithDataBit, getDataChunk } from "./accessors";
-import { getIteratorLength } from "utils/iterators";
+import { getDataChunk } from "./accessors";
+import { chunksByLength, sum } from "utils/math";
+import { task } from "../utils/tasks";
+import {
+  bytesInPixel,
+  dataBytesInPixel,
+  validAlfaChannelValue,
+} from "./constants";
 
 // Picture-conversation protocol identifier
 const identifier = "PC-PI";
@@ -59,7 +65,27 @@ export const readData = (
   return { data: textDecoder.decode(data.value) };
 };
 
-export const getMaxDataBytesCount = (buffer: Uint8ClampedArray) => {
-  const maxBits = getIteratorLength(getByteWithDataBit(buffer));
-  return ((maxBits / 8) | 0) - capacityInBytesLength - encodedIdentifier.length;
+export const getMaxDataBytesCount = async (buffer: Uint8ClampedArray) => {
+  // Optimal length for non blocking operation
+  const chunkLength = 1000000;
+
+  const chunksMaxBits = await Promise.all(
+    chunksByLength(buffer, chunkLength).map((chunk) =>
+      task(() => {
+        return (
+          chunk.filter((e, index) => {
+            return (
+              (index + 1) % bytesInPixel === 0 && e === validAlfaChannelValue
+            );
+          }).byteLength * dataBytesInPixel
+        );
+      }),
+    ),
+  );
+
+  return (
+    ((sum(chunksMaxBits) / 8) | 0) -
+    capacityInBytesLength -
+    encodedIdentifier.length
+  );
 };

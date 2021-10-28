@@ -9,8 +9,10 @@ import {
 import { getMaxDataBytesCount, readData, writeData } from "../protocol";
 import fileDownload from "js-file-download";
 import { RefObject } from "react";
+import { getFileAsDataUrl, getImageDataFromDataUrl } from "utils/files";
 
 export class AppStore {
+  private supportedTargetImageMimeType = "image/png";
   private encoder = new TextEncoder();
   private disposers: Array<() => void> = [];
   private readonly canvasRef: RefObject<HTMLCanvasElement>;
@@ -18,17 +20,10 @@ export class AppStore {
   public text = "";
   public file?: File = undefined;
   public imageData?: ImageData = undefined;
+  public maxDataBytesCount = 0;
 
   public get currentBytesCount() {
     return this.encoder.encode(this.text).length;
-  }
-
-  public get maxDataBytesCount() {
-    if (!this.imageData) {
-      return 0;
-    }
-
-    return getMaxDataBytesCount(this.imageData.data);
   }
 
   private get canvas() {
@@ -53,18 +48,23 @@ export class AppStore {
 
   constructor(canvasRef: RefObject<HTMLCanvasElement>) {
     this.canvasRef = canvasRef;
-    makeObservable<AppStore, "decode">(this, {
+    makeObservable<AppStore, "decode" | "computeMaxBytesCount">(this, {
       text: observable,
       file: observable,
       imageData: observable,
-      maxDataBytesCount: computed,
+      maxDataBytesCount: observable,
       currentBytesCount: computed,
       setFile: action,
       setText: action,
       decode: action,
+      computeMaxBytesCount: action,
     });
 
     this.disposers.push(reaction(() => this.imageData, this.decode));
+    // Because can't use async function in compute properties
+    this.disposers.push(
+      reaction(() => this.imageData, this.computeMaxBytesCount),
+    );
   }
 
   public setText = (value: string) => {
@@ -77,9 +77,10 @@ export class AppStore {
     this.file = file;
 
     if (file) {
-      const filePath = await getFilePath(file);
-      const { naturalWidth, naturalHeight } =
-        await getHeightAndWidthFromDataUrl(filePath);
+      const filePath = await getFileAsDataUrl(file);
+      const { naturalWidth, naturalHeight } = await getImageDataFromDataUrl(
+        filePath,
+      );
 
       this.canvas.width = naturalWidth;
       this.canvas.height = naturalHeight;
@@ -111,21 +112,16 @@ export class AppStore {
     });
   };
 
-  public encode = () => {
+  public encode = async () => {
     if (!this.file || !this.imageData) {
       return;
     }
 
-    const encoder = new TextEncoder();
-    const encodedText = encoder.encode(this.text);
-    const maxDataBytesCount = getMaxDataBytesCount(this.imageData.data);
-
-    if (encodedText.length > maxDataBytesCount) {
-      alert(`Too much symbols`);
+    if (this.currentBytesCount > this.maxDataBytesCount) {
       return;
     }
 
-    writeData(this.imageData.data, encodedText);
+    writeData(this.imageData.data, this.encoder.encode(this.text));
 
     this.canvasContext.putImageData(this.imageData, 0, 0);
 
@@ -134,9 +130,22 @@ export class AppStore {
 
     this.canvas.toBlob((blob) => {
       if (blob) {
-        fileDownload(blob, newFileName, "image/png");
+        fileDownload(blob, newFileName, this.supportedTargetImageMimeType);
       }
-    }, "image/png");
+    }, this.supportedTargetImageMimeType);
+  };
+
+  private computeMaxBytesCount = async (imageData?: ImageData) => {
+    if (!imageData) {
+      this.maxDataBytesCount = 0;
+      return;
+    }
+
+    const m = await getMaxDataBytesCount(imageData.data);
+
+    runInAction(() => {
+      this.maxDataBytesCount = m;
+    });
   };
 
   public dispose = () => {
@@ -145,37 +154,3 @@ export class AppStore {
     }
   };
 }
-
-const getFilePath = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-
-    fr.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-
-    fr.onerror = (e) => {
-      reject(e.target?.error);
-    };
-
-    fr.readAsDataURL(file);
-  });
-};
-
-const getHeightAndWidthFromDataUrl = (
-  dataURL: string,
-): Promise<{ naturalHeight: number; naturalWidth: number }> => {
-  const img = new Image();
-  return new Promise<{ naturalHeight: number; naturalWidth: number }>(
-    (resolve) => {
-      img.onload = () => {
-        resolve({
-          naturalHeight: img.naturalHeight,
-          naturalWidth: img.naturalWidth,
-        });
-      };
-
-      img.src = dataURL;
-    },
-  ).finally(() => img.remove());
-};
