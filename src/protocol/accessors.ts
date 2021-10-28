@@ -1,7 +1,10 @@
-const pixelBytes = 4;
-const alfaChannelIndex = 3;
-const bitsInByte = 8;
-const validAlfaChannelValue = 255;
+import {
+  alfaChannelIndex,
+  bitsInByte,
+  bytesInPixel,
+  dataBytesInPixel,
+  validAlfaChannelValue,
+} from "./constants";
 
 export function* getDataChunk(
   buffer: Uint8ClampedArray,
@@ -50,12 +53,12 @@ function* getDataByte(buffer: Uint8ClampedArray) {
 }
 
 export function* getByteWithDataBit(buffer: Uint8ClampedArray) {
-  for (let i = 0; i < buffer.byteLength; i += pixelBytes) {
+  for (let i = 0; i < buffer.byteLength; i += bytesInPixel) {
     if (buffer[i + alfaChannelIndex] !== validAlfaChannelValue) {
       continue;
     }
 
-    for (let j = 0; j < alfaChannelIndex; j++) {
+    for (let j = 0; j < dataBytesInPixel; j++) {
       yield [buffer[i + j], i + j] as [byte: number, index: number];
     }
   }
