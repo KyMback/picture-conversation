@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "experimentalDecorators": true,
     "target": "ES5",
     "module": "ESNext",
     "moduleResolution": "node",
@@ -14,7 +13,12 @@
       "stores/*": [
         "stores/*"
       ]
-    }
+    },
+    "lib": [
+      "dom",
+      "es5",
+      "es6"
+    ]
   },
   "include": [
     "./src"

@@ -83,7 +83,9 @@ export class AppStore {
 
       this.canvas.width = naturalWidth;
       this.canvas.height = naturalHeight;
-      this.canvasContext.drawImage(await createImageBitmap(file), 0, 0);
+      // TODO: think about compatibility see https://caniuse.com/?search=createImageBitmap
+      const imageBitmap = await createImageBitmap(file);
+      this.canvasContext.drawImage(imageBitmap, 0, 0);
       this.imageData = this.canvasContext.getImageData(
         0,
         0,
@@ -109,7 +111,7 @@ export class AppStore {
     });
   };
 
-  public encode = async () => {
+  public encode = () => {
     if (!this.file || !this.imageData) {
       return;
     }
@@ -125,28 +127,16 @@ export class AppStore {
 
     writeData(this.imageData.data, encodedText);
 
-    console.log("expected data:");
-    console.log(this.imageData.data);
     this.canvasContext.putImageData(this.imageData, 0, 0);
-    console.log("actual data:");
-    console.log(
-      this.canvasContext.getImageData(
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height,
-      ).data,
-    );
 
-    this.canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          fileDownload(blob, this.file!.name);
-        }
-      },
-      "image/png",
-      1,
-    );
+    const fileName = this.file.name;
+    const newFileName = fileName.substr(0, fileName.lastIndexOf(".")) + ".png";
+
+    this.canvas.toBlob((blob) => {
+      if (blob) {
+        fileDownload(blob, newFileName, "image/png");
+      }
+    }, "image/png");
   };
 
   public dispose = () => {
