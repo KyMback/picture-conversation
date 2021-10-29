@@ -71,8 +71,8 @@ export class AppStore {
     this.text = value;
   };
 
-  public setFile = async (value: FileList | null) => {
-    const file = value?.[0];
+  public setFile = async (value: Array<File>) => {
+    const file = value[0];
 
     this.file = file;
 
