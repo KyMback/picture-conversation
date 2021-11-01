@@ -8,26 +8,41 @@ import {
   dataBytesInPixel,
   validAlfaChannelValue,
 } from "./constants";
+import { major, minor, patch, neq, valid } from "semver";
 
 // Picture-conversation protocol identifier
 const identifier = "PC-PI";
 const encodedIdentifier = new TextEncoder().encode(identifier);
 const capacityInBytesLength = 4;
 
+const currentProtocolVersion = "0.0.1";
+const versionInBytes = new Uint8Array([
+  major(currentProtocolVersion),
+  minor(currentProtocolVersion),
+  patch(currentProtocolVersion),
+]);
+
 export const writeData = (buffer: Uint8ClampedArray, data: Uint8Array) => {
   const dataLengthInBytes = int32ToUint8Array(data.length);
 
   const allData = new Uint8Array(
-    encodedIdentifier.byteLength +
+    versionInBytes.byteLength +
+      encodedIdentifier.byteLength +
       dataLengthInBytes.byteLength +
       data.byteLength,
   );
 
   allData.set(encodedIdentifier);
-  allData.set(dataLengthInBytes, encodedIdentifier.byteLength);
+  allData.set(versionInBytes, encodedIdentifier.byteLength);
+  allData.set(
+    dataLengthInBytes,
+    encodedIdentifier.byteLength + versionInBytes.byteLength,
+  );
   allData.set(
     data,
-    encodedIdentifier.byteLength + dataLengthInBytes.byteLength,
+    encodedIdentifier.byteLength +
+      versionInBytes.byteLength +
+      dataLengthInBytes.byteLength,
   );
 
   writeDataAsLastBitsToBuffer(buffer, allData);
@@ -37,18 +52,33 @@ export const readData = (
   buffer: Uint8ClampedArray,
 ):
   | {
+      version: string;
       data: string;
     }
-  | { isNotPCP: true } => {
+  | {
+      isNotPCP: true;
+    } => {
   const chunk = getDataChunk(buffer);
   const textDecoder = new TextDecoder();
 
   chunk.next();
-  const nextIdBytes = chunk.next(encodedIdentifier.length);
+  const nextIdBytes = chunk.next(encodedIdentifier.byteLength);
   if (
     nextIdBytes.done ||
     new TextDecoder().decode(nextIdBytes.value) !== identifier
   ) {
+    return { isNotPCP: true };
+  }
+
+  const versionBytes = chunk.next(versionInBytes.byteLength);
+
+  if (versionBytes.done) {
+    return { isNotPCP: true };
+  }
+  const version = versionBytes.value.join(".");
+
+  // Not supported only current version
+  if (!valid(version) || neq(version, currentProtocolVersion)) {
     return { isNotPCP: true };
   }
 
@@ -62,7 +92,7 @@ export const readData = (
     return { isNotPCP: true };
   }
 
-  return { data: textDecoder.decode(data.value) };
+  return { version, data: textDecoder.decode(data.value) };
 };
 
 export const getMaxDataBytesCount = async (buffer: Uint8ClampedArray) => {
